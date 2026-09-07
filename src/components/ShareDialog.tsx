@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { shareDocumentAction, revokeShareAction } from '@/lib/actions';
 import type { ShareWithUser } from '@/lib/documents';
 import type { Permission, User } from '@/lib/types';
@@ -20,23 +20,53 @@ export function ShareDialog({
   const [permission, setPermission] = useState<Permission>('view');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   const shareableUsers = candidateUsers.filter((u) => !shares.some((s) => s.user_id === u.id));
+  // selectedUserId can go stale once its user is shared (they drop out of
+  // shareableUsers, but the state still holds their id). Falling back here
+  // keeps the dropdown's displayed value and the id we actually submit in
+  // sync, instead of silently resubmitting a no-longer-valid selection.
+  const effectiveUserId = shareableUsers.some((u) => u.id === selectedUserId)
+    ? selectedUserId
+    : (shareableUsers[0]?.id ?? '');
 
   function handleShare() {
-    if (!selectedUserId) return;
+    if (!effectiveUserId) return;
     setError(null);
     startTransition(async () => {
-      const result = await shareDocumentAction({ documentId, userId: selectedUserId, permission });
+      const result = await shareDocumentAction({
+        documentId,
+        userId: effectiveUserId,
+        permission,
+      });
       if (result.error) {
         setError(result.error);
         return;
       }
-      const user = candidateUsers.find((u) => u.id === selectedUserId)!;
+      const user = candidateUsers.find((u) => u.id === effectiveUserId)!;
       setShares((prev) => [
-        ...prev.filter((s) => s.user_id !== selectedUserId),
+        ...prev.filter((s) => s.user_id !== effectiveUserId),
         {
-          id: `${documentId}-${selectedUserId}`,
+          id: `${documentId}-${effectiveUserId}`,
           document_id: documentId,
           user_id: user.id,
           permission,
@@ -62,7 +92,7 @@ export function ShareDialog({
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -73,12 +103,22 @@ export function ShareDialog({
 
       {open && (
         <div className="absolute right-0 z-10 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
-          <h3 className="mb-3 text-sm font-semibold">Share this document</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Share this document</h3>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              className="rounded px-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
 
           {shareableUsers.length > 0 ? (
             <div className="mb-4 flex items-center gap-2">
               <select
-                value={selectedUserId}
+                value={effectiveUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
               >
