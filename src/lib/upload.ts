@@ -1,10 +1,9 @@
 import { marked } from 'marked';
 
-export const SUPPORTED_EXTENSIONS = ['.txt', '.md'] as const;
+const SUPPORTED_EXTENSIONS = ['.txt', '.md'] as const;
 export const MAX_UPLOAD_BYTES = 1024 * 1024; // 1MB
 
 export class UnsupportedFileTypeError extends Error {}
-export class FileTooLargeError extends Error {}
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -16,7 +15,7 @@ function textToHtml(text: string): string {
   return paragraphs.map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n');
 }
 
-export function fileNameToExtension(fileName: string): string {
+function fileNameToExtension(fileName: string): string {
   const idx = fileName.lastIndexOf('.');
   return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
 }
@@ -31,7 +30,6 @@ function assertSupportedExtension(fileName: string): string {
   return ext;
 }
 
-/** Converts a .txt/.md file's raw text into editor-ready HTML. */
 export async function fileTextToHtml(fileName: string, text: string): Promise<string> {
   const ext = assertSupportedExtension(fileName);
   return ext === '.md' ? await marked.parse(text) : textToHtml(text);

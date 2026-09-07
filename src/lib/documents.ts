@@ -33,13 +33,6 @@ export function getSharesWithUsers(documentId: string): ShareWithUser[] {
   return toPlainList(rows);
 }
 
-export function getSharesForUser(userId: string): ShareRow[] {
-  const rows = db
-    .prepare('SELECT * FROM shares WHERE user_id = ?')
-    .all(userId) as unknown as ShareRow[];
-  return toPlainList(rows);
-}
-
 export function listOwnedDocuments(userId: string): DocumentRow[] {
   const rows = db
     .prepare('SELECT * FROM documents WHERE owner_id = ? ORDER BY updated_at DESC')

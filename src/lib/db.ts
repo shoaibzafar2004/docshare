@@ -40,8 +40,8 @@ if (process.env.NODE_ENV !== 'production') {
   globalForDb.__docshareDb = db;
 }
 
-export function initSchema(database: DatabaseSync = db) {
-  database.exec(`
+function initSchema() {
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -91,12 +91,12 @@ const SEED_USERS = [
   { id: 'carol', name: 'Carol', email: 'carol@example.com', color: '#81b29a' },
 ];
 
-export function seedUsers(database: DatabaseSync = db) {
+function seedUsers() {
   // INSERT OR IGNORE rather than "check count, then insert": Next's build
   // process can load this module from several workers at once, and a
   // check-then-act race would otherwise trip the UNIQUE constraint when two
   // workers both see zero rows and both try to insert the same seed users.
-  const insert = database.prepare(
+  const insert = db.prepare(
     'INSERT OR IGNORE INTO users (id, name, email, color) VALUES (@id, @name, @email, @color)'
   );
   for (const user of SEED_USERS) insert.run(user);

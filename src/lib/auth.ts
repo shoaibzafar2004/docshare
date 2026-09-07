@@ -10,12 +10,6 @@ export function getCurrentUser(): User | null {
   return getUser(userId) ?? null;
 }
 
-export function requireCurrentUser(): User {
-  const user = getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
-  return user;
-}
-
 export function setCurrentUserCookie(userId: string) {
   cookies().set(COOKIE_NAME, userId, {
     httpOnly: true,
