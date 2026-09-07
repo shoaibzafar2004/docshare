@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { db, toPlain, toPlainList } from './db';
-import type { DocumentRow, ShareRow } from './types';
+import { canEdit, canView } from './access';
+import type { DocumentRow, Permission, ShareRow } from './types';
 
 export function getDocument(id: string): DocumentRow | undefined {
   const row = db.prepare('SELECT * FROM documents WHERE id = ?').get(id) as DocumentRow | undefined;
@@ -46,7 +47,7 @@ export function listOwnedDocuments(userId: string): DocumentRow[] {
   return toPlainList(rows);
 }
 
-export function listSharedDocuments(userId: string): (DocumentRow & { permission: string })[] {
+export function listSharedDocuments(userId: string): (DocumentRow & { permission: Permission })[] {
   const rows = db
     .prepare(
       `SELECT d.*, s.permission as permission
@@ -55,7 +56,7 @@ export function listSharedDocuments(userId: string): (DocumentRow & { permission
        WHERE s.user_id = ?
        ORDER BY d.updated_at DESC`
     )
-    .all(userId) as unknown as (DocumentRow & { permission: string })[];
+    .all(userId) as unknown as (DocumentRow & { permission: Permission })[];
   return toPlainList(rows);
 }
 
@@ -82,4 +83,40 @@ export function updateDocument(id: string, fields: { title?: string; content?: s
 
 export function deleteDocument(id: string): void {
   db.prepare('DELETE FROM documents WHERE id = ?').run(id);
+}
+
+/**
+ * Fetches a document and checks the user can at least view it, in one call.
+ * Returns null for both "doesn't exist" and "exists but no access" so
+ * callers can respond identically to either (a 404, not a 403) without
+ * leaking whether a document they can't see exists.
+ */
+export function getViewableDocument(
+  userId: string,
+  documentId: string
+): { doc: DocumentRow; shares: ShareRow[] } | null {
+  const doc = getDocument(documentId);
+  if (!doc) return null;
+  const shares = getSharesForDocument(doc.id);
+  if (!canView(userId, doc, shares)) return null;
+  return { doc, shares };
+}
+
+/**
+ * Fetches a document and checks the user can edit it, in one call. Used by
+ * every mutating server action (save, import, attach, delete-attachment) so
+ * the owner/share lookup and canEdit check live in exactly one place.
+ */
+export function requireEditAccess(
+  userId: string,
+  documentId: string,
+  action = 'edit'
+): { ok: true; doc: DocumentRow } | { ok: false; error: string } {
+  const doc = getDocument(documentId);
+  if (!doc) return { ok: false, error: 'Document not found' };
+  const shares = getSharesForDocument(doc.id);
+  if (!canEdit(userId, doc, shares)) {
+    return { ok: false, error: `You do not have permission to ${action} this document` };
+  }
+  return { ok: true, doc };
 }

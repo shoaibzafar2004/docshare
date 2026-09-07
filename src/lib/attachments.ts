@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { db, toPlain, toPlainList } from './db';
+import { getUser } from './users';
 import type { AttachmentMeta, AttachmentRow } from './types';
 
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
@@ -32,7 +33,7 @@ export function createAttachment(input: {
   mimeType: string;
   data: Uint8Array;
   uploadedBy: string;
-}): AttachmentMeta {
+}): AttachmentWithUploader {
   const id = randomUUID();
   db.prepare(
     `INSERT INTO attachments (id, document_id, file_name, mime_type, size, data, uploaded_by)
@@ -46,7 +47,24 @@ export function createAttachment(input: {
     input.data,
     input.uploadedBy
   );
-  return listAttachments(input.documentId).find((a) => a.id === id)!;
+  // Build the result from what we already know plus one cheap primary-key
+  // lookup for the DB-generated timestamp, rather than re-running the full
+  // listAttachments() JOIN (which scans every attachment on the document)
+  // just to find the row we just inserted.
+  const created = db.prepare('SELECT created_at FROM attachments WHERE id = ?').get(id) as {
+    created_at: string;
+  };
+  const uploader = getUser(input.uploadedBy)!;
+  return {
+    id,
+    document_id: input.documentId,
+    file_name: input.fileName,
+    mime_type: input.mimeType,
+    size: input.data.length,
+    uploaded_by: input.uploadedBy,
+    created_at: created.created_at,
+    uploader_name: uploader.name,
+  };
 }
 
 export function deleteAttachment(id: string): void {
