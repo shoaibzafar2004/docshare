@@ -2,11 +2,13 @@
 
 ## Live product
 
-**URL:** _TODO: paste Railway deployment URL here_
+**URL:** https://docshare-production-a4ae.up.railway.app
+
+Deployed on Railway (persistent Node process + volume — see `ARCHITECTURE.md` for why). Verified live: document creation/editing/persistence, sharing with view/edit permissions and access denial, file upload, content import, and attachments (upload/download/remove) — all pass against this URL, not just locally.
 
 ## Walkthrough video
 
-**URL:** _TODO: paste Loom/YouTube link here (see `WALKTHROUGH_VIDEO.txt`)_
+**URL:** https://www.loom.com/share/64e0df340a104046a52ec6551c502a61
 
 ## Test accounts
 
@@ -24,8 +26,7 @@ To review the sharing flow: log in as Alice, create a document, click **Share**,
 - **`README.md`** — local setup, run, test, lint, and deployment instructions.
 - **`ARCHITECTURE.md`** — what was prioritized, key trade-offs and why, and an explicit working/incomplete status split.
 - **`AI_WORKFLOW.md`** — which AI tools were used, where they helped, what was changed/rejected, and how output was verified.
-- **`SUBMISSION.md`** — this file.
-- **`WALKTHROUGH_VIDEO.txt`** — the walkthrough video link.
+- **`SUBMISSION.md`** — this file (includes the walkthrough video link above).
 - Screenshots: not included — local setup is a single `npm install && npm run dev`, with no extra manual steps, so a screenshot/GIF walkthrough of setup didn't add information beyond the README's copy-pasteable commands.
 
 ## Status (see `ARCHITECTURE.md § Status` for detail)
