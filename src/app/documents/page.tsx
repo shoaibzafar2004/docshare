@@ -16,8 +16,8 @@ export default function DocumentsPage() {
   const user = getCurrentUser();
   if (!user) redirect('/login');
 
-  const owned = listOwnedDocuments(user!.id);
-  const shared = listSharedDocuments(user!.id);
+  const owned = listOwnedDocuments(user.id);
+  const shared = listSharedDocuments(user.id);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -25,13 +25,13 @@ export default function DocumentsPage() {
         <div className="flex items-center gap-3">
           <span
             className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
-            style={{ backgroundColor: user!.color }}
+            style={{ backgroundColor: user.color }}
           >
-            {user!.name[0]}
+            {user.name[0]}
           </span>
           <div>
-            <div className="font-medium">{user!.name}</div>
-            <div className="text-xs text-gray-500">{user!.email}</div>
+            <div className="font-medium">{user.name}</div>
+            <div className="text-xs text-gray-500">{user.email}</div>
           </div>
         </div>
         <form action={logoutAction}>

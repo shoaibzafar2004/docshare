@@ -58,24 +58,12 @@ export function ShareDialog({
         userId: effectiveUserId,
         permission,
       });
-      if (result.error) {
-        setError(result.error);
+      if (result.error || !result.share) {
+        setError(result.error ?? 'Could not share this document');
         return;
       }
-      const user = candidateUsers.find((u) => u.id === effectiveUserId)!;
-      setShares((prev) => [
-        ...prev.filter((s) => s.user_id !== effectiveUserId),
-        {
-          id: `${documentId}-${effectiveUserId}`,
-          document_id: documentId,
-          user_id: user.id,
-          permission,
-          created_at: new Date().toISOString(),
-          user_name: user.name,
-          user_email: user.email,
-          user_color: user.color,
-        },
-      ]);
+      const share = result.share;
+      setShares((prev) => [...prev.filter((s) => s.user_id !== effectiveUserId), share]);
     });
   }
 

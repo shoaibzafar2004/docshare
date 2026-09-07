@@ -9,11 +9,13 @@ import {
   createDocument,
   deleteDocument,
   getDocument,
-  getSharesForDocument,
+  getSharesWithUsers,
+  requireEditAccess,
   updateDocument,
+  type ShareWithUser,
 } from './documents';
 import { shareDocument, revokeShare } from './shares';
-import { canEdit, isOwner } from './access';
+import { isOwner } from './access';
 import {
   parseUploadedFile,
   fileTextToHtml,
@@ -46,7 +48,7 @@ export async function logoutAction(): Promise<void> {
 export async function createDocumentAction(): Promise<void> {
   const user = getCurrentUser();
   if (!user) redirect('/login');
-  const doc = createDocument(user!.id, 'Untitled document', '<p></p>');
+  const doc = createDocument(user.id, 'Untitled document', '<p></p>');
   revalidatePath('/documents');
   redirect(`/documents/${doc.id}`);
 }
@@ -70,17 +72,12 @@ export async function saveDocumentAction(input: {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
-  const doc = getDocument(parsed.data.id);
-  if (!doc) return { error: 'Document not found' };
+  const access = requireEditAccess(user.id, parsed.data.id);
+  if (!access.ok) return { error: access.error };
 
-  const shares = getSharesForDocument(doc.id);
-  if (!canEdit(user.id, doc, shares)) {
-    return { error: 'You do not have permission to edit this document' };
-  }
-
-  updateDocument(doc.id, { title: parsed.data.title, content: parsed.data.content });
+  updateDocument(access.doc.id, { title: parsed.data.title, content: parsed.data.content });
   revalidatePath('/documents');
-  revalidatePath(`/documents/${doc.id}`);
+  revalidatePath(`/documents/${access.doc.id}`);
   return { ok: true };
 }
 
@@ -88,7 +85,7 @@ export async function deleteDocumentAction(documentId: string): Promise<void> {
   const user = getCurrentUser();
   if (!user) redirect('/login');
   const doc = getDocument(documentId);
-  if (!doc || !isOwner(user!.id, doc)) redirect('/documents');
+  if (!doc || !isOwner(user.id, doc)) redirect('/documents');
   deleteDocument(documentId);
   revalidatePath('/documents');
   redirect('/documents');
@@ -100,11 +97,13 @@ const shareSchema = z.object({
   permission: z.enum(['view', 'edit']),
 });
 
+type ShareDocumentResult = ActionResult & { share?: ShareWithUser };
+
 export async function shareDocumentAction(input: {
   documentId: string;
   userId: string;
   permission: 'view' | 'edit';
-}): Promise<ActionResult> {
+}): Promise<ShareDocumentResult> {
   const user = getCurrentUser();
   if (!user) return { error: 'Not authenticated' };
 
@@ -119,7 +118,11 @@ export async function shareDocumentAction(input: {
 
   shareDocument(parsed.data.documentId, parsed.data.userId, parsed.data.permission);
   revalidatePath(`/documents/${doc.id}`);
-  return { ok: true };
+  // Return the actual persisted row (real id/timestamp) rather than making
+  // the client reconstruct one, so its local state can't drift from what's
+  // in the database.
+  const share = getSharesWithUsers(doc.id).find((s) => s.user_id === parsed.data.userId);
+  return { ok: true, share };
 }
 
 export async function revokeShareAction(documentId: string, userId: string): Promise<ActionResult> {
@@ -170,13 +173,8 @@ export async function importContentAction(
   const user = getCurrentUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const doc = getDocument(documentId);
-  if (!doc) return { error: 'Document not found' };
-
-  const shares = getSharesForDocument(doc.id);
-  if (!canEdit(user.id, doc, shares)) {
-    return { error: 'You do not have permission to edit this document' };
-  }
+  const access = requireEditAccess(user.id, documentId);
+  if (!access.ok) return { error: access.error };
 
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
@@ -189,10 +187,11 @@ export async function importContentAction(
   try {
     const text = await file.text();
     const importedHtml = await fileTextToHtml(file.name, text);
-    const isBlankDraft = doc.content.trim() === '' || doc.content.trim() === '<p></p>';
-    const newContent = isBlankDraft ? importedHtml : `${doc.content}\n${importedHtml}`;
-    updateDocument(doc.id, { content: newContent });
-    revalidatePath(`/documents/${doc.id}`);
+    const isBlankDraft =
+      access.doc.content.trim() === '' || access.doc.content.trim() === '<p></p>';
+    const newContent = isBlankDraft ? importedHtml : `${access.doc.content}\n${importedHtml}`;
+    updateDocument(access.doc.id, { content: newContent });
+    revalidatePath(`/documents/${access.doc.id}`);
     return { ok: true, content: newContent };
   } catch (err) {
     if (err instanceof UnsupportedFileTypeError) {
@@ -211,13 +210,8 @@ export async function uploadAttachmentAction(
   const user = getCurrentUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const doc = getDocument(documentId);
-  if (!doc) return { error: 'Document not found' };
-
-  const shares = getSharesForDocument(doc.id);
-  if (!canEdit(user.id, doc, shares)) {
-    return { error: 'You do not have permission to add attachments to this document' };
-  }
+  const access = requireEditAccess(user.id, documentId, 'add attachments to');
+  if (!access.ok) return { error: access.error };
 
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
@@ -229,17 +223,17 @@ export async function uploadAttachmentAction(
 
   const buffer = new Uint8Array(await file.arrayBuffer());
   const attachment = createAttachment({
-    documentId: doc.id,
+    documentId: access.doc.id,
     fileName: file.name,
     mimeType: file.type || 'application/octet-stream',
     data: buffer,
     uploadedBy: user.id,
   });
-  revalidatePath(`/documents/${doc.id}`);
+  revalidatePath(`/documents/${access.doc.id}`);
   // Return the freshly created row (with its real server-generated id) so
   // the client can render a working download/delete link immediately,
   // rather than fabricating a placeholder id that wouldn't resolve.
-  return { ok: true, attachment: attachment as AttachmentWithUploader };
+  return { ok: true, attachment };
 }
 
 export async function deleteAttachmentAction(
@@ -249,13 +243,8 @@ export async function deleteAttachmentAction(
   const user = getCurrentUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const doc = getDocument(documentId);
-  if (!doc) return { error: 'Document not found' };
-
-  const shares = getSharesForDocument(doc.id);
-  if (!canEdit(user.id, doc, shares)) {
-    return { error: 'You do not have permission to remove attachments from this document' };
-  }
+  const access = requireEditAccess(user.id, documentId, 'remove attachments from');
+  if (!access.ok) return { error: access.error };
 
   const attachment = getAttachment(attachmentId);
   if (!attachment || attachment.document_id !== documentId) {
@@ -263,6 +252,6 @@ export async function deleteAttachmentAction(
   }
 
   deleteAttachment(attachmentId);
-  revalidatePath(`/documents/${doc.id}`);
+  revalidatePath(`/documents/${access.doc.id}`);
   return { ok: true };
 }

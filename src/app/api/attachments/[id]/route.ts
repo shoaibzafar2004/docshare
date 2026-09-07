@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getAttachment } from '@/lib/attachments';
-import { getDocument, getSharesForDocument } from '@/lib/documents';
-import { canView } from '@/lib/access';
+import { getViewableDocument } from '@/lib/documents';
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const user = getCurrentUser();
@@ -11,11 +10,9 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const attachment = getAttachment(params.id);
   if (!attachment) return new NextResponse('Not found', { status: 404 });
 
-  const doc = getDocument(attachment.document_id);
-  if (!doc) return new NextResponse('Not found', { status: 404 });
-
-  const shares = getSharesForDocument(doc.id);
-  if (!canView(user.id, doc, shares)) return new NextResponse('Not found', { status: 404 });
+  if (!getViewableDocument(user.id, attachment.document_id)) {
+    return new NextResponse('Not found', { status: 404 });
+  }
 
   return new NextResponse(Buffer.from(attachment.data), {
     status: 200,
