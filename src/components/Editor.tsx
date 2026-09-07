@@ -161,7 +161,7 @@ function ImportContentButton({
         />
       </label>
       <span className="text-xs text-gray-500">
-        Appends a .txt or .md file's content to this draft
+        Appends a .txt or .md file&apos;s content to this draft
       </span>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
@@ -204,11 +204,7 @@ export function DocumentEditor({
 
   const editor = useEditor({
     editable,
-    extensions: [
-      StarterKit,
-      Underline,
-      Placeholder.configure({ placeholder: 'Start writing…' }),
-    ],
+    extensions: [StarterKit, Underline, Placeholder.configure({ placeholder: 'Start writing…' })],
     content: initialContent,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
@@ -253,9 +249,7 @@ export function DocumentEditor({
       )}
       {editable && <Toolbar editor={editor} disabled={!editable} />}
       {!editable && (
-        <p className="mb-3 text-xs text-gray-500">
-          You have view-only access to this document.
-        </p>
+        <p className="mb-3 text-xs text-gray-500">You have view-only access to this document.</p>
       )}
 
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

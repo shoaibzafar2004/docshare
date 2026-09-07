@@ -21,9 +21,7 @@ export function ShareDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const shareableUsers = candidateUsers.filter(
-    (u) => !shares.some((s) => s.user_id === u.id)
-  );
+  const shareableUsers = candidateUsers.filter((u) => !shares.some((s) => s.user_id === u.id));
 
   function handleShare() {
     if (!selectedUserId) return;

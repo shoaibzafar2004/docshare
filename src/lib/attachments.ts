@@ -22,8 +22,7 @@ export function listAttachments(documentId: string): AttachmentWithUploader[] {
 
 export function getAttachment(id: string): AttachmentRow | undefined {
   const row = db.prepare('SELECT * FROM attachments WHERE id = ?').get(id) as
-    | AttachmentRow
-    | undefined;
+    AttachmentRow | undefined;
   return row ? toPlain(row) : undefined;
 }
 
@@ -38,7 +37,15 @@ export function createAttachment(input: {
   db.prepare(
     `INSERT INTO attachments (id, document_id, file_name, mime_type, size, data, uploaded_by)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, input.documentId, input.fileName, input.mimeType, input.data.length, input.data, input.uploadedBy);
+  ).run(
+    id,
+    input.documentId,
+    input.fileName,
+    input.mimeType,
+    input.data.length,
+    input.data,
+    input.uploadedBy
+  );
   return listAttachments(input.documentId).find((a) => a.id === id)!;
 }
 

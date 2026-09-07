@@ -33,7 +33,9 @@ export function getSharesWithUsers(documentId: string): ShareWithUser[] {
 }
 
 export function getSharesForUser(userId: string): ShareRow[] {
-  const rows = db.prepare('SELECT * FROM shares WHERE user_id = ?').all(userId) as unknown as ShareRow[];
+  const rows = db
+    .prepare('SELECT * FROM shares WHERE user_id = ?')
+    .all(userId) as unknown as ShareRow[];
   return toPlainList(rows);
 }
 
@@ -59,9 +61,12 @@ export function listSharedDocuments(userId: string): (DocumentRow & { permission
 
 export function createDocument(ownerId: string, title: string, content = ''): DocumentRow {
   const id = randomUUID();
-  db.prepare(
-    'INSERT INTO documents (id, title, content, owner_id) VALUES (?, ?, ?, ?)'
-  ).run(id, title, content, ownerId);
+  db.prepare('INSERT INTO documents (id, title, content, owner_id) VALUES (?, ?, ?, ?)').run(
+    id,
+    title,
+    content,
+    ownerId
+  );
   return getDocument(id)!;
 }
 

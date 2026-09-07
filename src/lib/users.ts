@@ -9,8 +9,7 @@ export function listUsers(): User[] {
 }
 
 export function getUser(id: string): User | undefined {
-  const row = db
-    .prepare('SELECT id, name, email, color FROM users WHERE id = ?')
-    .get(id) as User | undefined;
+  const row = db.prepare('SELECT id, name, email, color FROM users WHERE id = ?').get(id) as
+    User | undefined;
   return row ? toPlain(row) : undefined;
 }
