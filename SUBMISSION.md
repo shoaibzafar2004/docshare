@@ -8,7 +8,7 @@ Deployed on Railway (persistent Node process + volume — see `ARCHITECTURE.md` 
 
 ## Walkthrough video
 
-**URL:** _TODO: paste Loom/YouTube link here_
+**URL:** https://www.loom.com/share/64e0df340a104046a52ec6551c502a61
 
 ## Test accounts
 
