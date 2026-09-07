@@ -41,7 +41,7 @@ export default function DocumentsPage() {
         </form>
       </header>
 
-      <div className="mb-10 flex flex-wrap items-center gap-4">
+      <div className="mb-10 flex flex-wrap items-start gap-4">
         <form action={createDocumentAction}>
           <button
             type="submit"
