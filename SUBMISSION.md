@@ -8,7 +8,7 @@ Deployed on Railway (persistent Node process + volume — see `ARCHITECTURE.md` 
 
 ## Walkthrough video
 
-**URL:** _TODO: paste Loom/YouTube link here (see `WALKTHROUGH_VIDEO.txt`)_
+**URL:** _TODO: paste Loom/YouTube link here_
 
 ## Test accounts
 
@@ -26,8 +26,7 @@ To review the sharing flow: log in as Alice, create a document, click **Share**,
 - **`README.md`** — local setup, run, test, lint, and deployment instructions.
 - **`ARCHITECTURE.md`** — what was prioritized, key trade-offs and why, and an explicit working/incomplete status split.
 - **`AI_WORKFLOW.md`** — which AI tools were used, where they helped, what was changed/rejected, and how output was verified.
-- **`SUBMISSION.md`** — this file.
-- **`WALKTHROUGH_VIDEO.txt`** — the walkthrough video link.
+- **`SUBMISSION.md`** — this file (includes the walkthrough video link above).
 - Screenshots: not included — local setup is a single `npm install && npm run dev`, with no extra manual steps, so a screenshot/GIF walkthrough of setup didn't add information beyond the README's copy-pasteable commands.
 
 ## Status (see `ARCHITECTURE.md § Status` for detail)
