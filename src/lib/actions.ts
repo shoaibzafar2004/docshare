@@ -14,7 +14,12 @@ import {
 } from './documents';
 import { shareDocument, revokeShare } from './shares';
 import { canEdit, isOwner } from './access';
-import { parseUploadedFile, fileTextToHtml, MAX_UPLOAD_BYTES, UnsupportedFileTypeError } from './upload';
+import {
+  parseUploadedFile,
+  fileTextToHtml,
+  MAX_UPLOAD_BYTES,
+  UnsupportedFileTypeError,
+} from './upload';
 import {
   createAttachment,
   deleteAttachment,

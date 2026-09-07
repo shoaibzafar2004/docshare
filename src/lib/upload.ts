@@ -7,18 +7,13 @@ export class UnsupportedFileTypeError extends Error {}
 export class FileTooLargeError extends Error {}
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function textToHtml(text: string): string {
   const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
   if (paragraphs.length === 0) return '<p></p>';
-  return paragraphs
-    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
-    .join('\n');
+  return paragraphs.map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n');
 }
 
 export function fileNameToExtension(fileName: string): string {

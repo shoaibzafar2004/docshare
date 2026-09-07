@@ -34,7 +34,15 @@ To use a different database location, copy `.env.example` to `.env.local` and se
 npm test
 ```
 
-Covers the access-control logic (`canView`/`canEdit`) with unit tests, and document creation/sharing/revoking against a real (in-memory) SQLite database.
+Covers the access-control logic (`canView`/`canEdit`) with unit tests, and document creation/sharing/revoking and attachments against a real (in-memory) SQLite database.
+
+## Linting and formatting
+
+```bash
+npm run lint          # ESLint (next/core-web-vitals)
+npm run format        # Prettier — writes fixes
+npm run format:check  # Prettier — check only, no writes
+```
 
 ## Production build
 
@@ -42,6 +50,10 @@ Covers the access-control logic (`canView`/`canEdit`) with unit tests, and docum
 npm run build
 npm start
 ```
+
+## Continuous integration
+
+Every pull request into `main` (and every push to `main`) runs lint, a Prettier format check, a TypeScript type check, and the test suite via GitHub Actions — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). All four must pass before a PR can merge.
 
 ## Features
 
@@ -65,6 +77,10 @@ This app needs to run as a normal persistent Node process (`npm run build && npm
 5. Railway auto-detects the build (`npm run build`) and start (`npm start`) commands from `package.json`.
 
 Any other host that runs a persistent Node process with a writable/persistent disk (Render's paid tier, Fly.io, a VPS, etc.) works the same way — just point `DATABASE_PATH` at a path on persistent storage.
+
+## Contributing
+
+Changes go on a branch and get merged into `main` via pull request — the CI workflow above must pass before merging.
 
 ## Seeded users
 
