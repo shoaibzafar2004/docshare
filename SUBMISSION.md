@@ -2,7 +2,9 @@
 
 ## Live product
 
-**URL:** _TODO: paste Railway deployment URL here_
+**URL:** https://docshare-production-a4ae.up.railway.app
+
+Deployed on Railway (persistent Node process + volume — see `ARCHITECTURE.md` for why). Verified live: document creation/editing/persistence, sharing with view/edit permissions and access denial, file upload, content import, and attachments (upload/download/remove) — all pass against this URL, not just locally.
 
 ## Walkthrough video
 
