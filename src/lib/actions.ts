@@ -35,7 +35,8 @@ type ActionResult = { error?: string; ok?: true; id?: string };
 export async function loginAction(formData: FormData): Promise<void> {
   const userId = String(formData.get('userId') || '');
   const user = getUser(userId);
-  if (!user) throw new Error('Unknown user');
+  // Unknown id means a tampered request -- fail back to login, don't throw.
+  if (!user) redirect('/login');
   setCurrentUserCookie(user.id);
   redirect('/documents');
 }
@@ -118,9 +119,7 @@ export async function shareDocumentAction(input: {
 
   shareDocument(parsed.data.documentId, parsed.data.userId, parsed.data.permission);
   revalidatePath(`/documents/${doc.id}`);
-  // Return the actual persisted row (real id/timestamp) rather than making
-  // the client reconstruct one, so its local state can't drift from what's
-  // in the database.
+  // Return the real persisted row so the client can't drift from the DB.
   const share = getSharesWithUsers(doc.id).find((s) => s.user_id === parsed.data.userId);
   return { ok: true, share };
 }
@@ -165,7 +164,6 @@ export async function uploadFileAction(formData: FormData): Promise<ActionResult
 
 type ImportContentResult = ActionResult & { content?: string };
 
-/** Imports a .txt/.md file's content into an already-open document, appending it to the existing draft. */
 export async function importContentAction(
   documentId: string,
   formData: FormData
@@ -230,9 +228,7 @@ export async function uploadAttachmentAction(
     uploadedBy: user.id,
   });
   revalidatePath(`/documents/${access.doc.id}`);
-  // Return the freshly created row (with its real server-generated id) so
-  // the client can render a working download/delete link immediately,
-  // rather than fabricating a placeholder id that wouldn't resolve.
+  // Return the real created row so the client has a working download/delete link.
   return { ok: true, attachment };
 }
 
