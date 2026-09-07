@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { uploadAttachmentAction, deleteAttachmentAction } from '@/lib/actions';
 import type { AttachmentWithUploader } from '@/lib/attachments';
+import { useFileUploadAction } from '@/hooks/useFileUploadAction';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -20,40 +21,34 @@ export function AttachmentsPanel({
   editable: boolean;
 }) {
   const [attachments, setAttachments] = useState(initialAttachments);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [isRemoving, startRemoveTransition] = useTransition();
 
-  function handleUpload() {
-    const file = inputRef.current?.files?.[0];
-    if (!file) return;
-    setError(null);
-
-    const formData = new FormData();
-    formData.set('file', file);
-
-    startTransition(async () => {
-      const result = await uploadAttachmentAction(documentId, formData);
-      if (result.error) {
-        setError(result.error);
-      } else if (result.attachment) {
-        setAttachments((prev) => [result.attachment!, ...prev]);
-      }
-      if (inputRef.current) inputRef.current.value = '';
-    });
-  }
+  const {
+    inputRef,
+    error: uploadError,
+    isPending: isUploading,
+    handleChange: handleUpload,
+  } = useFileUploadAction(
+    (formData) => uploadAttachmentAction(documentId, formData),
+    (result) => {
+      if (result.attachment) setAttachments((prev) => [result.attachment!, ...prev]);
+    }
+  );
 
   function handleRemove(id: string) {
-    setError(null);
-    startTransition(async () => {
+    setRemoveError(null);
+    startRemoveTransition(async () => {
       const result = await deleteAttachmentAction(documentId, id);
       if (result.error) {
-        setError(result.error);
+        setRemoveError(result.error);
         return;
       }
       setAttachments((prev) => prev.filter((a) => a.id !== id));
     });
   }
+
+  const error = uploadError ?? removeError;
 
   return (
     <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -63,13 +58,13 @@ export function AttachmentsPanel({
         </h3>
         {editable && (
           <label className="cursor-pointer text-xs font-medium text-ink underline">
-            {isPending ? 'Uploading…' : 'Attach a file'}
+            {isUploading ? 'Uploading…' : 'Attach a file'}
             <input
               ref={inputRef}
               type="file"
               className="hidden"
               onChange={handleUpload}
-              disabled={isPending}
+              disabled={isUploading}
             />
           </label>
         )}
@@ -96,7 +91,7 @@ export function AttachmentsPanel({
                   <button
                     type="button"
                     onClick={() => handleRemove(a.id)}
-                    disabled={isPending}
+                    disabled={isRemoving}
                     className="text-red-500 hover:underline disabled:opacity-50"
                   >
                     Remove

@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, type Editor as TiptapEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
 import { saveDocumentAction, importContentAction } from '@/lib/actions';
+import { useFileUploadAction } from '@/hooks/useFileUploadAction';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -123,29 +124,15 @@ function ImportContentButton({
   editor: TiptapEditor | null;
   onImported: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleChange() {
-    const file = inputRef.current?.files?.[0];
-    if (!file || !editor) return;
-    setError(null);
-
-    const formData = new FormData();
-    formData.set('file', file);
-
-    startTransition(async () => {
-      const result = await importContentAction(documentId, formData);
-      if (result.error) {
-        setError(result.error);
-      } else if (result.content) {
+  const { inputRef, error, isPending, handleChange } = useFileUploadAction(
+    (formData) => importContentAction(documentId, formData),
+    (result) => {
+      if (result.content && editor) {
         editor.commands.setContent(result.content);
         onImported();
       }
-      if (inputRef.current) inputRef.current.value = '';
-    });
-  }
+    }
+  );
 
   return (
     <div className="mb-3 flex items-center gap-2">
@@ -157,7 +144,7 @@ function ImportContentButton({
           accept=".txt,.md,text/plain,text/markdown"
           className="hidden"
           onChange={handleChange}
-          disabled={isPending}
+          disabled={isPending || !editor}
         />
       </label>
       <span className="text-xs text-gray-500">

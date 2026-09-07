@@ -1,33 +1,17 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadFileAction } from '@/lib/actions';
+import { useFileUploadAction } from '@/hooks/useFileUploadAction';
 
 export function UploadForm() {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-
-  function handleChange() {
-    const file = inputRef.current?.files?.[0];
-    if (!file) return;
-    setError(null);
-
-    const formData = new FormData();
-    formData.set('file', file);
-
-    startTransition(async () => {
-      const result = await uploadFileAction(formData);
-      if (result.error) {
-        setError(result.error);
-      } else if (result.id) {
-        router.push(`/documents/${result.id}`);
-      }
-      if (inputRef.current) inputRef.current.value = '';
-    });
-  }
+  const { inputRef, error, isPending, handleChange } = useFileUploadAction(
+    uploadFileAction,
+    (result) => {
+      if (result.id) router.push(`/documents/${result.id}`);
+    }
+  );
 
   return (
     <div className="flex flex-col items-start gap-1">
