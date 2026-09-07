@@ -17,6 +17,12 @@ Given a tight time budget, I optimized for a small number of features working co
 - **Autosave, not a save button as the primary flow.** Content and title save ~700ms after the user stops typing, each field independently, merged into one write. There is deliberately no manual "Save" button as the primary mechanism — the risk of a mismatch between the visible editor state and the saved state felt higher than the benefit of manual control for this scope.
 - **Deploy target: Railway over Vercel.** Vercel's serverless functions have an ephemeral filesystem, which is incompatible with a local SQLite file. Rather than adding a second external service (a hosted database) to get file-per-request persistence on Vercel, I targeted a platform that runs the app as a normal persistent process with a real disk, so the same SQLite file that works locally also works in production unchanged. This was a direct trade discussed with the assessment reviewer: pay a small (~$1/month past a 30-day free trial) hosting cost in exchange for less moving infrastructure.
 
+## Status
+
+**Working end to end:** document create/rename/edit with rich-text formatting (bold, italic, underline, headings, lists), autosave with persistence across refresh/restart; file upload that creates a new document (`.txt`/`.md`); importing a file's content into an already-open document (appends to the draft); file attachments of any type (≤5MB) associated with a document, with access-checked download; sharing with view/edit permission, owner vs. shared distinction in the UI, and correct access enforcement (verified with automated tests plus real-browser regression runs covering all of the above, including the two-person-sharing and access-denial edge cases).
+
+**Incomplete / deliberately out of scope:** real authentication (seeded users only); `.docx` import; concurrent-edit conflict handling (last write wins, no merge/locking); document version history; real-time collaboration presence.
+
 ## What I'd do with more time
 
 - Real password/OAuth-based auth instead of the seeded-user picker.
