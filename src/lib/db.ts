@@ -67,9 +67,21 @@ export function initSchema(database: DatabaseSync = db) {
       UNIQUE(document_id, user_id)
     );
 
+    CREATE TABLE IF NOT EXISTS attachments (
+      id TEXT PRIMARY KEY,
+      document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      file_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      data BLOB NOT NULL,
+      uploaded_by TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents(owner_id);
     CREATE INDEX IF NOT EXISTS idx_shares_document ON shares(document_id);
     CREATE INDEX IF NOT EXISTS idx_shares_user ON shares(user_id);
+    CREATE INDEX IF NOT EXISTS idx_attachments_document ON attachments(document_id);
   `);
 }
 

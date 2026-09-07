@@ -23,3 +23,17 @@ export interface ShareRow {
   permission: Permission;
   created_at: string;
 }
+
+export interface AttachmentMeta {
+  id: string;
+  document_id: string;
+  file_name: string;
+  mime_type: string;
+  size: number;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface AttachmentRow extends AttachmentMeta {
+  data: Uint8Array;
+}

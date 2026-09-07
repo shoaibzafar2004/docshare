@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useEditor, EditorContent, type Editor as TiptapEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
-import { saveDocumentAction } from '@/lib/actions';
+import { saveDocumentAction, importContentAction } from '@/lib/actions';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -114,6 +114,60 @@ function Toolbar({ editor, disabled }: { editor: TiptapEditor | null; disabled: 
   );
 }
 
+function ImportContentButton({
+  documentId,
+  editor,
+  onImported,
+}: {
+  documentId: string;
+  editor: TiptapEditor | null;
+  onImported: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange() {
+    const file = inputRef.current?.files?.[0];
+    if (!file || !editor) return;
+    setError(null);
+
+    const formData = new FormData();
+    formData.set('file', file);
+
+    startTransition(async () => {
+      const result = await importContentAction(documentId, formData);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.content) {
+        editor.commands.setContent(result.content);
+        onImported();
+      }
+      if (inputRef.current) inputRef.current.value = '';
+    });
+  }
+
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <label className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-gray-50">
+        {isPending ? 'Importing…' : 'Import content'}
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".txt,.md,text/plain,text/markdown"
+          className="hidden"
+          onChange={handleChange}
+          disabled={isPending}
+        />
+      </label>
+      <span className="text-xs text-gray-500">
+        Appends a .txt or .md file's content to this draft
+      </span>
+      {error && <span className="text-xs text-red-600">{error}</span>}
+    </div>
+  );
+}
+
 export function DocumentEditor({
   documentId,
   initialTitle,
@@ -190,6 +244,13 @@ export function DocumentEditor({
         </span>
       </div>
 
+      {editable && (
+        <ImportContentButton
+          documentId={documentId}
+          editor={editor}
+          onImported={() => setStatus('saved')}
+        />
+      )}
       {editable && <Toolbar editor={editor} disabled={!editable} />}
       {!editable && (
         <p className="mb-3 text-xs text-gray-500">

@@ -14,7 +14,14 @@ import {
 } from './documents';
 import { shareDocument, revokeShare } from './shares';
 import { canEdit, isOwner } from './access';
-import { parseUploadedFile, MAX_UPLOAD_BYTES, UnsupportedFileTypeError } from './upload';
+import { parseUploadedFile, fileTextToHtml, MAX_UPLOAD_BYTES, UnsupportedFileTypeError } from './upload';
+import {
+  createAttachment,
+  deleteAttachment,
+  getAttachment,
+  MAX_ATTACHMENT_BYTES,
+  type AttachmentWithUploader,
+} from './attachments';
 
 type ActionResult = { error?: string; ok?: true; id?: string };
 
@@ -146,4 +153,111 @@ export async function uploadFileAction(formData: FormData): Promise<ActionResult
     }
     return { error: 'Could not import this file' };
   }
+}
+
+type ImportContentResult = ActionResult & { content?: string };
+
+/** Imports a .txt/.md file's content into an already-open document, appending it to the existing draft. */
+export async function importContentAction(
+  documentId: string,
+  formData: FormData
+): Promise<ImportContentResult> {
+  const user = getCurrentUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const doc = getDocument(documentId);
+  if (!doc) return { error: 'Document not found' };
+
+  const shares = getSharesForDocument(doc.id);
+  if (!canEdit(user.id, doc, shares)) {
+    return { error: 'You do not have permission to edit this document' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Please choose a file to import' };
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { error: 'File is too large (1MB max)' };
+  }
+
+  try {
+    const text = await file.text();
+    const importedHtml = await fileTextToHtml(file.name, text);
+    const isBlankDraft = doc.content.trim() === '' || doc.content.trim() === '<p></p>';
+    const newContent = isBlankDraft ? importedHtml : `${doc.content}\n${importedHtml}`;
+    updateDocument(doc.id, { content: newContent });
+    revalidatePath(`/documents/${doc.id}`);
+    return { ok: true, content: newContent };
+  } catch (err) {
+    if (err instanceof UnsupportedFileTypeError) {
+      return { error: err.message };
+    }
+    return { error: 'Could not import this file' };
+  }
+}
+
+type UploadAttachmentResult = ActionResult & { attachment?: AttachmentWithUploader };
+
+export async function uploadAttachmentAction(
+  documentId: string,
+  formData: FormData
+): Promise<UploadAttachmentResult> {
+  const user = getCurrentUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const doc = getDocument(documentId);
+  if (!doc) return { error: 'Document not found' };
+
+  const shares = getSharesForDocument(doc.id);
+  if (!canEdit(user.id, doc, shares)) {
+    return { error: 'You do not have permission to add attachments to this document' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Please choose a file to attach' };
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { error: 'File is too large (5MB max)' };
+  }
+
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  const attachment = createAttachment({
+    documentId: doc.id,
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    data: buffer,
+    uploadedBy: user.id,
+  });
+  revalidatePath(`/documents/${doc.id}`);
+  // Return the freshly created row (with its real server-generated id) so
+  // the client can render a working download/delete link immediately,
+  // rather than fabricating a placeholder id that wouldn't resolve.
+  return { ok: true, attachment: attachment as AttachmentWithUploader };
+}
+
+export async function deleteAttachmentAction(
+  documentId: string,
+  attachmentId: string
+): Promise<ActionResult> {
+  const user = getCurrentUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const doc = getDocument(documentId);
+  if (!doc) return { error: 'Document not found' };
+
+  const shares = getSharesForDocument(doc.id);
+  if (!canEdit(user.id, doc, shares)) {
+    return { error: 'You do not have permission to remove attachments from this document' };
+  }
+
+  const attachment = getAttachment(attachmentId);
+  if (!attachment || attachment.document_id !== documentId) {
+    return { error: 'Attachment not found' };
+  }
+
+  deleteAttachment(attachmentId);
+  revalidatePath(`/documents/${doc.id}`);
+  return { ok: true };
 }

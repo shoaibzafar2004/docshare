@@ -3,10 +3,12 @@ import { notFound, redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { getDocument, getSharesForDocument, getSharesWithUsers } from '@/lib/documents';
 import { listUsers } from '@/lib/users';
+import { listAttachments } from '@/lib/attachments';
 import { canEdit, canView, isOwner } from '@/lib/access';
 import { deleteDocumentAction } from '@/lib/actions';
 import { DocumentEditor } from '@/components/Editor';
 import { ShareDialog } from '@/components/ShareDialog';
+import { AttachmentsPanel } from '@/components/AttachmentsPanel';
 
 export default function DocumentPage({ params }: { params: { id: string } }) {
   const user = getCurrentUser();
@@ -23,6 +25,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
 
   const sharesWithUsers = owner ? getSharesWithUsers(doc!.id) : [];
   const candidateUsers = owner ? listUsers().filter((u) => u.id !== user!.id) : [];
+  const attachments = listAttachments(doc!.id);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -57,6 +60,8 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
         initialContent={doc!.content}
         editable={editable}
       />
+
+      <AttachmentsPanel documentId={doc!.id} initialAttachments={attachments} editable={editable} />
     </main>
   );
 }

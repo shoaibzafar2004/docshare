@@ -26,18 +26,27 @@ export function fileNameToExtension(fileName: string): string {
   return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
 }
 
-export async function parseUploadedFile(
-  fileName: string,
-  text: string
-): Promise<{ title: string; content: string }> {
+function assertSupportedExtension(fileName: string): string {
   const ext = fileNameToExtension(fileName);
   if (!SUPPORTED_EXTENSIONS.includes(ext as (typeof SUPPORTED_EXTENSIONS)[number])) {
     throw new UnsupportedFileTypeError(
       `Unsupported file type "${ext || 'unknown'}". Only .txt and .md files can be imported.`
     );
   }
+  return ext;
+}
 
+/** Converts a .txt/.md file's raw text into editor-ready HTML. */
+export async function fileTextToHtml(fileName: string, text: string): Promise<string> {
+  const ext = assertSupportedExtension(fileName);
+  return ext === '.md' ? await marked.parse(text) : textToHtml(text);
+}
+
+export async function parseUploadedFile(
+  fileName: string,
+  text: string
+): Promise<{ title: string; content: string }> {
+  const content = await fileTextToHtml(fileName, text);
   const title = fileName.replace(/\.(txt|md)$/i, '') || 'Untitled';
-  const content = ext === '.md' ? await marked.parse(text) : textToHtml(text);
   return { title, content };
 }
