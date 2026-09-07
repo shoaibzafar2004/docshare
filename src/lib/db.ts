@@ -10,7 +10,18 @@ import type { DatabaseSync } from 'node:sqlite';
 const sqlite = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite');
 const DatabaseSyncCtor = sqlite.DatabaseSync;
 
-const DATABASE_PATH = process.env.DATABASE_PATH || './data/app.db';
+// During `next build`, Next imports and statically analyzes every route
+// module (including this one, transitively), running its top-level code —
+// but on hosts like Railway the persistent volume isn't attached until the
+// container actually runs, so writing to the real DATABASE_PATH at build
+// time hits a non-persistent file that multiple build workers race to open
+// and seed at once. Falling back to a private in-memory DB during the build
+// phase sidesteps that shared-file race entirely and is harmless, since
+// nothing written during static analysis needs to survive into runtime.
+const DATABASE_PATH =
+  process.env.NEXT_PHASE === 'phase-production-build'
+    ? ':memory:'
+    : process.env.DATABASE_PATH || './data/app.db';
 
 function ensureParentDir(filePath: string) {
   if (filePath === ':memory:') return;
